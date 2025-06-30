@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article Review App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        /* Custom styles for star rating buttons */
+        .star-button {
+            font-size: 2rem; /* 32px equivalent to text-3xl */
+            transition: color 200ms;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+        .star-button.filled {
+            color: #fbbf24; /* yellow-400 */
+        }
+        .star-button.empty {
+            color: #d1d5db; /* gray-300 */
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-4">
+    <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-8 transform hover:scale-100 transition-transform duration-300">
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-6 tracking-tight">Article Review App</h1>
+
+        <!-- Display Current User ID -->
+        <div id="userIdDisplay" class="text-center mb-6 text-sm text-gray-600 p-3 bg-indigo-50 rounded-lg shadow-inner hidden">
+            Your User ID: <span id="currentUserId" class="font-mono text-indigo-700 font-bold break-all"></span>
+            <p class="mt-1">Share this ID with the other person to identify yourself!</p>
+        </div>
+
+        <!-- Message Box -->
+        <div id="messageBox" class="border px-4 py-3 rounded-md mb-4 hidden" role="alert">
+            <p id="messageTitle" class="font-bold"></p>
+            <p id="messageText" class="text-sm"></p>
+        </div>
+
+        <!-- Add Article Form -->
+        <form id="addArticleForm" class="mb-10 p-6 bg-gray-50 rounded-xl shadow-md">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-5">Add Your Article Review</h2>
+            <div class="mb-4">
+                <label for="articleUrl" class="block text-gray-700 text-sm font-medium mb-2">Article URL:</label>
+                <input
+                    type="url"
+                    id="articleUrl"
+                    class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    placeholder="e.g., https://example.com/article"
+                    required
+                />
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-medium mb-2">Rating (1-5 Stars):</label>
+                <div id="starRatingContainer" class="flex space-x-1">
+                    <!-- Stars will be rendered here by JavaScript -->
+                </div>
+            </div>
+            <div class="mb-6">
+                <label for="comment" class="block text-gray-700 text-sm font-medium mb-2">Your Comment:</label>
+                <textarea
+                    id="comment"
+                    class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent h-24 resize-y"
+                    placeholder="What are your thoughts on this article?"
+                    required
+                ></textarea>
+            </div>
+            <button
+                type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 ease-in-out transform hover:scale-105 shadow-lg"
+            >
+                Add Review
+            </button>
+        </form>
+
+        <!-- Article List Display -->
+        <h2 class="text-3xl font-semibold text-gray-800 mb-6 border-b pb-3">All Articles Reviewed</h2>
+        <div id="articlesList" class="grid gap-6 md:grid-cols-2">
+            <p id="noArticlesMessage" class="text-center text-gray-500 text-lg py-8">No articles reviewed yet. Be the first to add one!</p>
+            <!-- Articles will be rendered here by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let app;
+        let db;
+        let auth;
+        let currentUserId = null;
+        let currentRating = 0; // State for the rating in the form
+
+        // --- DOM Elements ---
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const currentUserIdSpan = document.getElementById('currentUserId');
+        const messageBox = document.getElementById('messageBox');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageText = document.getElementById('messageText');
+        const addArticleForm = document.getElementById('addArticleForm');
+        const articleUrlInput = document.getElementById('articleUrl');
+        const commentInput = document.getElementById('comment');
+        const starRatingContainer = document.getElementById('starRatingContainer');
+        const articlesList = document.getElementById('articlesList');
+        const noArticlesMessage = document.getElementById('noArticlesMessage');
+
+        // --- Message Display Function ---
+        const showMessage = (msg, type) => {
+            messageBox.classList.remove('hidden');
+            if (type === 'success') {
+                messageBox.classList.remove('bg-red-100', 'border-red-400', 'text-red-700');
+                messageBox.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
+                messageTitle.textContent = 'Success!';
+            } else {
+                messageBox.classList.remove('bg-green-100', 'border-green-400', 'text-green-700');
+                messageBox.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
+                messageTitle.textContent = 'Error!';
+            }
+            messageText.textContent = msg;
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000); // Hide after 5 seconds
+        };
+
+        // --- Star Rating Renderer ---
+        const renderStarRating = (container, ratingValue, isInteractive = true) => {
+            container.innerHTML = ''; // Clear previous stars
+            for (let i = 1; i <= 5; i++) {
+                const starButton = document.createElement('button');
+                starButton.type = 'button';
+                starButton.classList.add('star-button');
+                starButton.textContent = '★';
+                if (i <= ratingValue) {
+                    starButton.classList.add('filled');
+                    starButton.classList.remove('empty');
+                } else {
+                    starButton.classList.add('empty');
+                    starButton.classList.remove('filled');
+                }
+
+                if (isInteractive) {
+                    starButton.addEventListener('click', () => {
+                        currentRating = i; // Update the state
+                        renderStarRating(container, currentRating, true); // Re-render to reflect selection
+                    });
+                } else {
+                    starButton.disabled = true; // Make non-interactive stars unclickable
+                }
+                container.appendChild(starButton);
+            }
+        };
+
+        // --- Firebase Initialization ---
+        const initializeFirebase = async () => {
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        currentUserIdSpan.textContent = currentUserId;
+                        userIdDisplay.classList.remove('hidden');
+                        showMessage('Signed in successfully!', 'success');
+                        setupFirestoreListener(); // Start listening for articles after auth
+                    } else {
+                        currentUserId = null;
+                        userIdDisplay.classList.add('hidden');
+                        showMessage('Failed to sign in. Please refresh.', 'error');
+                    }
+                });
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                showMessage(`Error initializing Firebase: ${error.message}`, 'error');
+            }
+        };
+
+        // --- Firestore Data Listener ---
+        const setupFirestoreListener = () => {
+            if (!db || !currentUserId) {
+                console.warn('Firestore or User ID not ready for listener setup.');
+                return;
+            }
+
+            try {
+                const articlesCollectionRef = collection(db, `artifacts/${__app_id}/public/data/articles`);
+
+                onSnapshot(articlesCollectionRef, (snapshot) => {
+                    const fetchedArticles = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    renderArticles(fetchedArticles);
+                }, (error) => {
+                    console.error("Error fetching articles:", error);
+                    showMessage(`Error fetching articles: ${error.message}`, 'error');
+                });
+            } catch (error) {
+                console.error("Error setting up Firestore listener:", error);
+                showMessage(`Error setting up Firestore listener: ${error.message}`, 'error');
+            }
+        };
+
+        // --- Render Articles ---
+        const renderArticles = (articles) => {
+            articlesList.innerHTML = ''; // Clear existing articles
+            if (articles.length === 0) {
+                noArticlesMessage.classList.remove('hidden');
+                articlesList.appendChild(noArticlesMessage);
+            } else {
+                noArticlesMessage.classList.add('hidden');
+                // Sort by latest first
+                articles.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+
+                articles.forEach(article => {
+                    const articleDiv = document.createElement('div');
+                    articleDiv.classList.add('bg-white', 'p-6', 'rounded-xl', 'shadow-lg', 'border', 'border-gray-200', 'relative');
+                    articleDiv.innerHTML = `
+                        <p class="text-xs text-gray-500 mb-2">Reviewed by: <span class="font-bold text-gray-700">${article.userId === currentUserId ? 'You' : article.userId}</span></p>
+                        <h3 class="text-xl font-bold text-blue-700 mb-2 truncate">
+                            <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                                ${article.url}
+                            </a>
+                        </h3>
+                        <div class="flex items-center mb-3" data-rating-container>
+                            <!-- Stars will be rendered here by JavaScript -->
+                        </div>
+                        ${article.timestamp ? `<p class="text-sm text-gray-500 mb-2">Added on: ${new Date(article.timestamp.toDate()).toLocaleDateString()}</p>` : ''}
+                        <p class="text-gray-700 text-md mb-4 italic">"${article.comment}"</p>
+                        ${article.isSuggested ? `
+                            <span class="absolute top-4 right-4 bg-purple-100 text-purple-700 text-xs font-semibold px-2.5 py-0.5 rounded-full shadow-sm">
+                                Suggested!
+                            </span>` : ''
+                        }
+                        ${currentUserId ? `
+                            <button
+                                data-article-id="${article.id}"
+                                data-is-suggested="${article.isSuggested}"
+                                class="suggest-button mt-3 px-4 py-2 rounded-lg text-sm font-semibold transition duration-200 ease-in-out transform hover:scale-105 shadow-md
+                                ${article.isSuggested ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}
+                            ">
+                                ${article.isSuggested ? 'Unsuggest This' : 'Suggest This to Other'}
+                            </button>` : ''
+                        }
+                    `;
+                    const ratingContainer = articleDiv.querySelector('[data-rating-container]');
+                    renderStarRating(ratingContainer, article.rating, false); // Render non-interactive stars
+
+                    articlesList.appendChild(articleDiv);
+                });
+
+                // Attach event listeners for suggest buttons after rendering
+                articlesList.querySelectorAll('.suggest-button').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const articleId = e.target.dataset.articleId;
+                        const isSuggested = e.target.dataset.isSuggested === 'true'; // Convert string to boolean
+                        await handleSuggestArticle(articleId, isSuggested);
+                    });
+                });
+            }
+        };
+
+        // --- Form Submission Handler ---
+        addArticleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!db || !currentUserId) {
+                showMessage('Firebase not initialized or user not signed in.', 'error');
+                return;
+            }
+            if (!articleUrlInput.value || currentRating === 0 || !commentInput.value) {
+                showMessage('Please fill in all fields (URL, Rating, Comment).', 'error');
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, `artifacts/${__app_id}/public/data/articles`), {
+                    url: articleUrlInput.value,
+                    rating: currentRating,
+                    comment: commentInput.value,
+                    userId: currentUserId,
+                    isSuggested: false,
+                    timestamp: new Date()
+                });
+                showMessage('Article added successfully!', 'success');
+                articleUrlInput.value = '';
+                commentInput.value = '';
+                currentRating = 0; // Reset rating
+                renderStarRating(starRatingContainer, currentRating, true); // Re-render form stars
+            } catch (error) {
+                console.error("Error adding article:", error);
+                showMessage(`Error adding article: ${error.message}`, 'error');
+            }
+        });
+
+        // --- Suggest Article Handler ---
+        const handleSuggestArticle = async (articleId, currentIsSuggested) => {
+            if (!db || !currentUserId) {
+                showMessage('Firebase not initialized or user not signed in.', 'error');
+                return;
+            }
+            try {
+                const articleRef = doc(db, `artifacts/${__app_id}/public/data/articles`, articleId);
+                await updateDoc(articleRef, {
+                    isSuggested: !currentIsSuggested
+                });
+                showMessage(`Article ${!currentIsSuggested ? 'suggested' : 'unsuggested'}!`, 'success');
+            } catch (error) {
+                console.error("Error suggesting article:", error);
+                showMessage(`Error suggesting article: ${error.message}`, 'error');
+            }
+        };
+
+        // --- Initialize on Window Load ---
+        window.onload = () => {
+            initializeFirebase();
+            renderStarRating(starRatingContainer, currentRating, true); // Initialize form stars
+        };
+    </script>
+</body>
+</html>
