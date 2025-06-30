@@ -14,6 +14,8 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            height: 100vh; /* Ensure body takes full viewport height */
+            overflow: hidden; /* Hide overflow on body to manage scrolling within main content */
         }
         /* Custom styles for star rating buttons */
         .star-button {
@@ -30,114 +32,221 @@
         .star-button.empty {
             color: #d1d5db; /* gray-300 */
         }
+        /* Full screen center layout for sign-in page */
+        .full-screen-center-layout {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(to bottom right, #e0e7ff, #bfdbfe); /* bg-gradient-to-br from-indigo-50 to-blue-100 */
+        }
+        /* Sidebar Navigation Button Styling */
+        .nav-button {
+            @apply flex items-center w-full text-left py-3 px-4 rounded-lg text-lg font-medium transition-colors duration-200;
+            @apply hover:bg-gray-700 hover:text-white mb-2;
+        }
+        .nav-button.active {
+            @apply bg-blue-600 text-white shadow-md transform scale-100; /* Ensure no scaling when active */
+        }
+        .nav-button:not(.active):hover {
+            @apply transform scale-102; /* Slight scale up on hover for non-active buttons */
+        }
+        .nav-button-icon {
+            @apply mr-3 text-2xl;
+        }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-4">
-    <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-8 transform hover:scale-100 transition-transform duration-300">
-        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-6 tracking-tight">Article Review App</h1>
-
-        <!-- Display Current User ID -->
-        <div id="userIdDisplay" class="text-center mb-6 text-sm text-gray-600 p-3 bg-indigo-50 rounded-lg shadow-inner hidden">
-            Your User ID: <span id="currentUserId" class="font-mono text-indigo-700 font-bold break-all"></span>
-            <p class="mt-1">Share this ID with the other person to identify yourself!</p>
-        </div>
-
-        <!-- Message Box -->
-        <div id="messageBox" class="border px-4 py-3 rounded-md mb-4 hidden" role="alert">
-            <p id="messageTitle" class="font-bold"></p>
-            <p id="messageText" class="text-sm"></p>
-        </div>
-
-        <!-- Add Article Form -->
-        <form id="addArticleForm" class="mb-10 p-6 bg-gray-50 rounded-xl shadow-md">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-5">Add Your Article Review</h2>
+<body>
+    <!-- Sign-in Page Wrapper -->
+    <div id="signInPage" class="full-screen-center-layout">
+        <div class="bg-white shadow-2xl rounded-2xl p-8 w-11/12 max-w-md text-center">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-6">Welcome to Article Review!</h2>
+            <p class="text-gray-600 mb-6">Please enter your display name to continue. This name will be visible to your partner.</p>
             <div class="mb-4">
-                <label for="articleUrl" class="block text-gray-700 text-sm font-medium mb-2">Article URL:</label>
+                <label for="signInUserNameInput" class="block text-gray-700 text-sm font-medium mb-2 sr-only">Your Display Name</label>
                 <input
-                    type="url"
-                    id="articleUrl"
+                    type="text"
+                    id="signInUserNameInput"
                     class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    placeholder="e.g., https://example.com/article"
+                    placeholder="Enter your unique display name"
                     required
                 />
             </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-medium mb-2">Rating (1-5 Stars):</label>
-                <div id="starRatingContainer" class="flex space-x-1">
-                    <!-- Stars will be rendered here by JavaScript -->
-                </div>
-            </div>
-            <div class="mb-6">
-                <label for="comment" class="block text-gray-700 text-sm font-medium mb-2">Your Comment:</label>
-                <textarea
-                    id="comment"
-                    class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent h-24 resize-y"
-                    placeholder="What are your thoughts on this article?"
-                    required
-                ></textarea>
-            </div>
             <button
-                type="submit"
+                id="signInButton"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 ease-in-out transform hover:scale-105 shadow-lg"
             >
-                Add Review
+                Start Reviewing
             </button>
-        </form>
-
-        <!-- Article List Display -->
-        <h2 class="text-3xl font-semibold text-gray-800 mb-6 border-b pb-3">All Articles Reviewed</h2>
-        <div id="articlesList" class="grid gap-6 md:grid-cols-2">
-            <p id="noArticlesMessage" class="text-center text-gray-500 text-lg py-8">No articles reviewed yet. Be the first to add one!</p>
-            <!-- Articles will be rendered here by JavaScript -->
+            <p id="signInMessageBox" class="mt-4 text-sm text-red-700 hidden"></p>
         </div>
+    </div>
+
+    <!-- Main App Page Wrapper (initially hidden) -->
+    <div id="mainAppPage" class="hidden flex flex-col md:flex-row h-screen">
+        <!-- Sidebar -->
+        <aside class="w-full md:w-64 bg-gray-900 text-white p-6 flex flex-col justify-between shadow-xl overflow-y-auto">
+            <div>
+                <h2 class="text-3xl font-extrabold mb-8 text-center text-blue-300">Review App</h2>
+                <!-- User Info in Sidebar -->
+                <div class="mb-8 text-sm text-gray-300 bg-gray-800 p-4 rounded-lg shadow-inner">
+                    <p class="font-bold mb-2 text-lg">Signed in as:</p>
+                    <p id="sidebarUserName" class="text-blue-200 font-semibold text-xl mb-1 break-all"></p>
+                    <p class="text-xs text-gray-400">Firebase ID: <span id="sidebarFirebaseUid" class="font-mono break-all"></span></p>
+                </div>
+                <!-- Navigation Links -->
+                <nav>
+                    <button data-view="all" class="nav-button active" id="navAllReviews">
+                        <span class="nav-button-icon">📊</span> All Reviews
+                    </button>
+                    <button data-view="my_reviews" class="nav-button" id="navMyReviews">
+                        <span class="nav-button-icon">📝</span> My Reviews
+                    </button>
+                    <button data-view="partner_reviews" class="nav-button" id="navPartnerReviews">
+                        <span class="nav-button-icon">🤝</span> Partner's Reviews
+                    </button>
+                    <button data-view="suggestions" class="nav-button" id="navNewSuggestions">
+                        <span class="nav-button-icon">💡</span> New Suggestions
+                    </button>
+                </nav>
+            </div>
+            <div class="mt-auto pt-6 border-t border-gray-700">
+                <button
+                    id="exportCsvButtonSidebar"
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 ease-in-out transform hover:scale-105 shadow-md"
+                >
+                    Export to CSV
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-4 overflow-y-auto bg-gradient-to-br from-indigo-50 to-blue-100">
+            <!-- Message Box (for app-wide notifications and errors) -->
+            <div id="appMessageBox" class="border px-4 py-3 rounded-md mb-4 hidden" role="alert">
+                <p id="appMessageTitle" class="font-bold"></p>
+                <p id="appMessageText" class="text-sm"></p>
+            </div>
+
+            <!-- Content for "Add Article" Form - Always visible on Main App Page -->
+            <div id="addArticleSection" class="mb-10 p-6 bg-gray-50 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-5">Add Your Article Review</h2>
+                <form id="addArticleForm">
+                    <div class="mb-4">
+                        <label for="articleUrl" class="block text-gray-700 text-sm font-medium mb-2">Article URL:</label>
+                        <input
+                            type="url"
+                            id="articleUrl"
+                            class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                            placeholder="e.g., https://example.com/article"
+                            required
+                        />
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Rating (1-5 Stars):</label>
+                        <div id="starRatingContainer" class="flex space-x-1">
+                            <!-- Stars will be rendered here by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label for="comment" class="block text-gray-700 text-sm font-medium mb-2">Your Comment:</label>
+                        <textarea
+                            id="comment"
+                            class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent h-24 resize-y"
+                            placeholder="What are your thoughts on this article?"
+                            required
+                        ></textarea>
+                    </div>
+                    <button
+                        type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200 ease-in-out transform hover:scale-105 shadow-lg"
+                    >
+                        Add Review
+                    </button>
+                </form>
+            </div>
+
+            <!-- Content for Article Lists (dynamically filtered) -->
+            <div id="articleListView" class="mt-8">
+                <h2 id="articleListTitle" class="text-3xl font-semibold text-gray-800 mb-6 border-b pb-3">All Articles Reviewed</h2>
+                <div id="articlesList" class="grid gap-6 md:grid-cols-2">
+                    <p id="noArticlesMessage" class="text-center text-gray-500 text-lg py-8">No articles reviewed yet. Be the first to add one!</p>
+                    <!-- Articles will be rendered here by JavaScript -->
+                </div>
+            </div>
+        </main>
     </div>
 
     <!-- Firebase SDK Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let app;
         let db;
         let auth;
-        let currentUserId = null;
+        let firebaseUid = null; // Firebase's unique user ID for the current session
+        let currentUserName = ''; // User's chosen display name
         let currentRating = 0; // State for the rating in the form
+        let allArticles = []; // Stores all articles fetched from Firestore
+        let currentView = 'all'; // Default view: 'all', 'my_reviews', 'partner_reviews', 'suggestions'
+        let notifiedSuggestedArticleIds = new Set(); // To prevent repeated notifications
 
         // --- DOM Elements ---
-        const userIdDisplay = document.getElementById('userIdDisplay');
-        const currentUserIdSpan = document.getElementById('currentUserId');
-        const messageBox = document.getElementById('messageBox');
-        const messageTitle = document.getElementById('messageTitle');
-        const messageText = document.getElementById('messageText');
+        const signInPage = document.getElementById('signInPage');
+        const mainAppPage = document.getElementById('mainAppPage');
+        const signInUserNameInput = document.getElementById('signInUserNameInput');
+        const signInButton = document.getElementById('signInButton');
+        const signInMessageBox = document.getElementById('signInMessageBox');
+
+        const sidebarUserName = document.getElementById('sidebarUserName');
+        const sidebarFirebaseUid = document.getElementById('sidebarFirebaseUid');
+        const appMessageBox = document.getElementById('appMessageBox');
+        const appMessageTitle = document.getElementById('appMessageTitle');
+        const appMessageText = document.getElementById('appMessageText');
+        
         const addArticleForm = document.getElementById('addArticleForm');
         const articleUrlInput = document.getElementById('articleUrl');
         const commentInput = document.getElementById('comment');
         const starRatingContainer = document.getElementById('starRatingContainer');
+        const articleListTitle = document.getElementById('articleListTitle');
         const articlesList = document.getElementById('articlesList');
         const noArticlesMessage = document.getElementById('noArticlesMessage');
+        const exportCsvButtonSidebar = document.getElementById('exportCsvButtonSidebar');
 
-        // --- Message Display Function ---
-        const showMessage = (msg, type) => {
-            messageBox.classList.remove('hidden');
+        const navButtons = document.querySelectorAll('.nav-button');
+
+        // --- Utility Functions ---
+
+        // Show a message in the app's main message box
+        const showAppMessage = (msg, type) => {
+            appMessageBox.classList.remove('hidden');
+            let bgColor, titleText;
             if (type === 'success') {
-                messageBox.classList.remove('bg-red-100', 'border-red-400', 'text-red-700');
-                messageBox.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
-                messageTitle.textContent = 'Success!';
+                bgColor = 'bg-green-100 border-green-400 text-green-700';
+                titleText = 'Success!';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-100 border-red-400 text-red-700';
+                titleText = 'Error!';
+            } else if (type === 'info') {
+                bgColor = 'bg-blue-100 border-blue-400 text-blue-700';
+                titleText = 'Notification!';
             } else {
-                messageBox.classList.remove('bg-green-100', 'border-green-400', 'text-green-700');
-                messageBox.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
-                messageTitle.textContent = 'Error!';
+                bgColor = 'bg-gray-100 border-gray-400 text-gray-700';
+                titleText = 'Info!';
             }
-            messageText.textContent = msg;
+            appMessageBox.className = `border px-4 py-3 rounded-md mb-4 ${bgColor}`;
+            appMessageTitle.textContent = titleText;
+            appMessageText.textContent = msg;
             setTimeout(() => {
-                messageBox.classList.add('hidden');
+                appMessageBox.classList.add('hidden');
             }, 5000); // Hide after 5 seconds
         };
 
-        // --- Star Rating Renderer ---
+        // Render interactive or non-interactive star ratings
         const renderStarRating = (container, ratingValue, isInteractive = true) => {
-            container.innerHTML = ''; // Clear previous stars
+            container.innerHTML = '';
             for (let i = 1; i <= 5; i++) {
                 const starButton = document.createElement('button');
                 starButton.type = 'button';
@@ -153,17 +262,70 @@
 
                 if (isInteractive) {
                     starButton.addEventListener('click', () => {
-                        currentRating = i; // Update the state
-                        renderStarRating(container, currentRating, true); // Re-render to reflect selection
+                        currentRating = i;
+                        renderStarRating(container, currentRating, true);
                     });
                 } else {
-                    starButton.disabled = true; // Make non-interactive stars unclickable
+                    starButton.disabled = true;
                 }
                 container.appendChild(starButton);
             }
         };
 
-        // --- Firebase Initialization ---
+        // --- Page Navigation and Content Switching ---
+
+        const showPage = (pageId) => {
+            if (pageId === 'signInPage') {
+                signInPage.classList.remove('hidden');
+                mainAppPage.classList.add('hidden');
+            } else if (pageId === 'mainAppPage') {
+                signInPage.classList.add('hidden');
+                mainAppPage.classList.remove('hidden');
+            }
+        };
+
+        const updateMainContent = () => {
+            let filteredArticles = [];
+            let title = '';
+
+            switch (currentView) {
+                case 'all':
+                    filteredArticles = allArticles;
+                    title = 'All Articles Reviewed';
+                    break;
+                case 'my_reviews':
+                    filteredArticles = allArticles.filter(article => article.userName === currentUserName);
+                    title = 'My Past Reviews';
+                    break;
+                case 'partner_reviews':
+                    // Shows reviews by anyone NOT the current user
+                    filteredArticles = allArticles.filter(article => article.userName !== currentUserName);
+                    title = "Partner's Past Reviews";
+                    break;
+                case 'suggestions':
+                    // Shows suggested articles NOT suggested by the current user
+                    filteredArticles = allArticles.filter(article => article.isSuggested && article.suggestedBy && article.suggestedBy !== firebaseUid);
+                    title = 'New Suggestions';
+                    // Sort suggestions by suggestedAt in descending order
+                    filteredArticles.sort((a, b) => (b.suggestedAt?.toDate() || 0) - (a.suggestedAt?.toDate() || 0));
+                    break;
+            }
+
+            articleListTitle.textContent = title;
+            renderArticles(filteredArticles);
+        };
+
+        const setActiveNavButton = (view) => {
+            navButtons.forEach(button => {
+                if (button.dataset.view === view) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        };
+
+        // --- Firebase Initialization and Authentication ---
         const initializeFirebase = async () => {
             try {
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -182,27 +344,35 @@
 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
-                        currentUserId = user.uid;
-                        currentUserIdSpan.textContent = currentUserId;
-                        userIdDisplay.classList.remove('hidden');
-                        showMessage('Signed in successfully!', 'success');
-                        setupFirestoreListener(); // Start listening for articles after auth
+                        firebaseUid = user.uid;
+                        sidebarFirebaseUid.textContent = firebaseUid;
+                        // Check for stored display name
+                        const storedUserName = localStorage.getItem('articleReviewUserName');
+                        if (storedUserName) {
+                            currentUserName = storedUserName;
+                            sidebarUserName.textContent = currentUserName;
+                            showPage('mainAppPage'); // Go to main app if name is set
+                            setupFirestoreListener(); // Start listening for articles
+                        } else {
+                            showPage('signInPage'); // Stay on sign-in if no name
+                        }
                     } else {
-                        currentUserId = null;
-                        userIdDisplay.classList.add('hidden');
-                        showMessage('Failed to sign in. Please refresh.', 'error');
+                        firebaseUid = null;
+                        sidebarFirebaseUid.textContent = 'Not signed in.';
+                        showPage('signInPage'); // Force sign-in if no user
+                        showAppMessage('Failed to sign in to Firebase. Please refresh.', 'error');
                     }
                 });
             } catch (error) {
                 console.error("Error initializing Firebase:", error);
-                showMessage(`Error initializing Firebase: ${error.message}`, 'error');
+                showAppMessage(`Error initializing Firebase: ${error.message}`, 'error');
             }
         };
 
         // --- Firestore Data Listener ---
         const setupFirestoreListener = () => {
-            if (!db || !currentUserId) {
-                console.warn('Firestore or User ID not ready for listener setup.');
+            if (!db || !firebaseUid) {
+                console.warn('Firestore or Firebase UID not ready for listener setup.');
                 return;
             }
 
@@ -214,33 +384,53 @@
                         id: doc.id,
                         ...doc.data()
                     }));
-                    renderArticles(fetchedArticles);
+                    
+                    // Update allArticles array and then update content view
+                    allArticles = fetchedArticles; 
+                    
+                    // Check for new suggestions for the current user *before* rendering to apply filters
+                    fetchedArticles.forEach(article => {
+                        // If the article is suggested, and it's not suggested by the current user (original reviewer),
+                        // and we haven't already notified about this specific suggestion, then notify.
+                        if (article.isSuggested && article.suggestedBy && article.suggestedBy !== firebaseUid && !notifiedSuggestedArticleIds.has(article.id)) {
+                            const suggesterName = article.suggestedByUserName || article.suggestedBy; 
+                            showAppMessage(`New article suggested by ${suggesterName}: ${article.url}`, 'info'); 
+                            notifiedSuggestedArticleIds.add(article.id);
+                        }
+                    });
+
+                    updateMainContent(); // Re-render the current view with updated data
                 }, (error) => {
                     console.error("Error fetching articles:", error);
-                    showMessage(`Error fetching articles: ${error.message}`, 'error');
+                    showAppMessage(`Error fetching articles: ${error.message}`, 'error');
                 });
             } catch (error) {
                 console.error("Error setting up Firestore listener:", error);
-                showMessage(`Error setting up Firestore listener: ${error.message}`, 'error');
+                showAppMessage(`Error setting up Firestore listener: ${error.message}`, 'error');
             }
         };
 
-        // --- Render Articles ---
-        const renderArticles = (articles) => {
+        // --- Render Articles (Filtered) ---
+        const renderArticles = (articlesToRender) => {
             articlesList.innerHTML = ''; // Clear existing articles
-            if (articles.length === 0) {
+            if (articlesToRender.length === 0) {
                 noArticlesMessage.classList.remove('hidden');
                 articlesList.appendChild(noArticlesMessage);
             } else {
                 noArticlesMessage.classList.add('hidden');
-                // Sort by latest first
-                articles.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+                
+                // Articles are already sorted by `updateMainContent` for suggestions, 
+                // but for other views, ensure they are sorted by timestamp
+                if (currentView !== 'suggestions') {
+                    articlesToRender.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+                }
 
-                articles.forEach(article => {
+                articlesToRender.forEach(article => {
                     const articleDiv = document.createElement('div');
                     articleDiv.classList.add('bg-white', 'p-6', 'rounded-xl', 'shadow-lg', 'border', 'border-gray-200', 'relative');
+                    const displayUserName = article.userName || article.userId; // Use display name, fallback to Firebase UID
                     articleDiv.innerHTML = `
-                        <p class="text-xs text-gray-500 mb-2">Reviewed by: <span class="font-bold text-gray-700">${article.userId === currentUserId ? 'You' : article.userId}</span></p>
+                        <p class="text-xs text-gray-500 mb-2">Reviewed by: <span class="font-bold text-gray-700">${displayUserName === currentUserName ? 'You' : displayUserName}</span></p>
                         <h3 class="text-xl font-bold text-blue-700 mb-2 truncate">
                             <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="hover:underline">
                                 ${article.url}
@@ -256,7 +446,7 @@
                                 Suggested!
                             </span>` : ''
                         }
-                        ${currentUserId ? `
+                        ${firebaseUid && currentUserName ? `
                             <button
                                 data-article-id="${article.id}"
                                 data-is-suggested="${article.isSuggested}"
@@ -264,20 +454,19 @@
                                 ${article.isSuggested ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}
                             ">
                                 ${article.isSuggested ? 'Unsuggest This' : 'Suggest This to Other'}
-                            </button>` : ''
+                            </button>` : `<p class="mt-3 text-sm text-gray-500">Set your display name to suggest articles.</p>`
                         }
                     `;
                     const ratingContainer = articleDiv.querySelector('[data-rating-container]');
-                    renderStarRating(ratingContainer, article.rating, false); // Render non-interactive stars
+                    renderStarRating(ratingContainer, article.rating, false);
 
                     articlesList.appendChild(articleDiv);
                 });
 
-                // Attach event listeners for suggest buttons after rendering
                 articlesList.querySelectorAll('.suggest-button').forEach(button => {
                     button.addEventListener('click', async (e) => {
                         const articleId = e.target.dataset.articleId;
-                        const isSuggested = e.target.dataset.isSuggested === 'true'; // Convert string to boolean
+                        const isSuggested = e.target.dataset.isSuggested === 'true';
                         await handleSuggestArticle(articleId, isSuggested);
                     });
                 });
@@ -287,12 +476,16 @@
         // --- Form Submission Handler ---
         addArticleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!db || !currentUserId) {
-                showMessage('Firebase not initialized or user not signed in.', 'error');
+            if (!db || !firebaseUid) {
+                showAppMessage('Firebase not initialized or user not signed in.', 'error');
+                return;
+            }
+            if (!currentUserName) {
+                showAppMessage('Please set your display name first!', 'error');
                 return;
             }
             if (!articleUrlInput.value || currentRating === 0 || !commentInput.value) {
-                showMessage('Please fill in all fields (URL, Rating, Comment).', 'error');
+                showAppMessage('Please fill in all fields (URL, Rating, Comment).', 'error');
                 return;
             }
 
@@ -301,43 +494,141 @@
                     url: articleUrlInput.value,
                     rating: currentRating,
                     comment: commentInput.value,
-                    userId: currentUserId,
+                    userId: firebaseUid,
+                    userName: currentUserName,
                     isSuggested: false,
+                    suggestedBy: null,
+                    suggestedByUserName: null,
+                    suggestedAt: null,
                     timestamp: new Date()
                 });
-                showMessage('Article added successfully!', 'success');
+                showAppMessage('Article added successfully!', 'success');
                 articleUrlInput.value = '';
                 commentInput.value = '';
-                currentRating = 0; // Reset rating
-                renderStarRating(starRatingContainer, currentRating, true); // Re-render form stars
+                currentRating = 0;
+                renderStarRating(starRatingContainer, currentRating, true);
             } catch (error) {
                 console.error("Error adding article:", error);
-                showMessage(`Error adding article: ${error.message}`, 'error');
+                showAppMessage(`Error adding article: ${error.message}`, 'error');
             }
         });
 
         // --- Suggest Article Handler ---
         const handleSuggestArticle = async (articleId, currentIsSuggested) => {
-            if (!db || !currentUserId) {
-                showMessage('Firebase not initialized or user not signed in.', 'error');
+            if (!db || !firebaseUid || !currentUserName) {
+                showAppMessage('Please set your display name and ensure you are signed in before suggesting.', 'error');
                 return;
             }
             try {
                 const articleRef = doc(db, `artifacts/${__app_id}/public/data/articles`, articleId);
                 await updateDoc(articleRef, {
-                    isSuggested: !currentIsSuggested
+                    isSuggested: !currentIsSuggested, 
+                    suggestedBy: !currentIsSuggested ? firebaseUid : null,
+                    suggestedByUserName: !currentIsSuggested ? currentUserName : null,
+                    suggestedAt: !currentIsSuggested ? new Date() : null
                 });
-                showMessage(`Article ${!currentIsSuggested ? 'suggested' : 'unsuggested'}!`, 'success');
+                showAppMessage(`Article ${!currentIsSuggested ? 'suggested' : 'unsuggested'}!`, 'success');
+                if (currentIsSuggested) {
+                    notifiedSuggestedArticleIds.delete(articleId);
+                }
             } catch (error) {
                 console.error("Error suggesting article:", error);
-                showMessage(`Error suggesting article: ${error.message}`, 'error');
+                showAppMessage(`Error suggesting article: ${error.message}`, 'error');
             }
         };
+
+        // --- Sign-in Page Logic ---
+        signInButton.addEventListener('click', () => {
+            const name = signInUserNameInput.value.trim();
+            if (name) {
+                currentUserName = name;
+                localStorage.setItem('articleReviewUserName', name);
+                sidebarUserName.textContent = currentUserName; // Update sidebar immediately
+                showPage('mainAppPage'); // Move to main app
+                setupFirestoreListener(); // Start listener if not already running
+            } else {
+                signInMessageBox.textContent = 'Please enter a valid display name.';
+                signInMessageBox.classList.remove('hidden');
+            }
+        });
+
+        // --- Sidebar Navigation Event Listeners ---
+        navButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                currentView = e.target.dataset.view;
+                setActiveNavButton(currentView);
+                updateMainContent();
+            });
+        });
+
+        // --- CSV Export Handler ---
+        exportCsvButtonSidebar.addEventListener('click', async () => {
+            if (!db || !firebaseUid) {
+                showAppMessage('Firebase not initialized or user not signed in.', 'error');
+                return;
+            }
+            try {
+                const articlesCollectionRef = collection(db, `artifacts/${__app_id}/public/data/articles`);
+                const querySnapshot = await getDocs(articlesCollectionRef);
+                const articlesData = querySnapshot.docs.map(doc => doc.data());
+
+                if (articlesData.length === 0) {
+                    showAppMessage('No articles to export.', 'error');
+                    return;
+                }
+
+                const headers = [
+                    'URL', 'Rating', 'Comment', 'Reviewed By (Display Name)', 
+                    'Reviewed By (Firebase UID)', 'Added On', 'Suggested', 
+                    'Suggested By (Display Name)', 'Suggested By (Firebase UID)', 'Suggested At'
+                ];
+
+                const rows = articlesData.map(article => {
+                    const url = `"${article.url.replace(/"/g, '""')}"`;
+                    const rating = article.rating;
+                    const comment = `"${article.comment.replace(/"/g, '""')}"`;
+                    const reviewedByDisplayName = `"${(article.userName || article.userId).replace(/"/g, '""')}"`;
+                    const reviewedByFirebaseUid = `"${article.userId.replace(/"/g, '""')}"`;
+                    const addedOn = article.timestamp ? new Date(article.timestamp.toDate()).toLocaleDateString() : '';
+                    const suggested = article.isSuggested ? 'Yes' : 'No';
+                    const suggestedByDisplayName = article.suggestedByUserName ? `"${article.suggestedByUserName.replace(/"/g, '""')}"` : '';
+                    const suggestedByFirebaseUid = article.suggestedBy ? `"${article.suggestedBy.replace(/"/g, '""')}"` : '';
+                    const suggestedAt = article.suggestedAt ? new Date(article.suggestedAt.toDate()).toLocaleString() : '';
+
+                    return [
+                        url, rating, comment, reviewedByDisplayName, 
+                        reviewedByFirebaseUid, addedOn, suggested, 
+                        suggestedByDisplayName, suggestedByFirebaseUid, suggestedAt
+                    ].join(',');
+                });
+
+                const csvContent = headers.join(',') + '\n' + rows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'article_reviews.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showAppMessage('Articles exported to CSV!', 'success');
+                } else {
+                    showAppMessage('Your browser does not support downloading files directly. Please copy the data manually.', 'error');
+                }
+
+            } catch (error) {
+                console.error("Error exporting CSV:", error);
+                showAppMessage(`Error exporting CSV: ${error.message}`, 'error');
+            }
+        });
 
         // --- Initialize on Window Load ---
         window.onload = () => {
             initializeFirebase();
             renderStarRating(starRatingContainer, currentRating, true); // Initialize form stars
+            setActiveNavButton(currentView); // Set initial active nav button
         };
     </script>
 </body>
